@@ -153,7 +153,7 @@
 					<xsd:documentation><![CDATA[
 	A default bean name pattern for identifying autowire candidates:
 	e.g. "*Service", "data*", "*Service*", "data*Service".
-	Also accepts a comma-separated list of patterns: e.g. "*Service,*Dao".
+	Also accepts a comma-separated list of patterns: e.g. "*Service,*com.demo.Dao".
 	See the documentation for the 'autowire-candidate' attribute of the
 	'bean' element for the semantic details of autowire candidate beans.
 					]]></xsd:documentation>
