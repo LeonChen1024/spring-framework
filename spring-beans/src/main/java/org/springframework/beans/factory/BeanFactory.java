@@ -21,6 +21,74 @@ import org.springframework.core.ResolvableType;
 import org.springframework.lang.Nullable;
 
 /**
+ * 访问 Spring bean 容器的根接口.
+ *
+ * 这是一个bean容器的基础客户端视图; 其他的子接口比如 {@link ListableBeanFactory} 和
+ * {@link org.springframework.beans.factory.config.ConfigurableBeanFactory}
+ * 都是附带有特殊目的.
+ *
+ * 这个接口给那些持有一定的bean定义的对象实现的,每个bean 都被一个字符串名字唯一标识.
+ * 根据bean的定义,工厂将会返回一个独立的对象实例(通过原型设计模式),或者是一个共享单例实例
+ * (一个单例设计模式的另一种选择,实例在工厂作用域内是单例的).返回哪一种类型的实例是根据bean工厂
+ * 的配置:API是一样的.自从Spring 2.0 开始,在实际的application上下文上支持了更多的作用域
+ * (比如 web 环境中的"request" 和 "session"作用域)
+ *
+ * 这种方式的重点是 BeanFactory 是应用组件的一个中心注册表,并且集中配置了应用组件(比如,
+ * 单个对象不再需要读取配置文件).可以查看 "Expert One-on-One J2EE Design and Development"
+ * 书中的第4章和第11章对于这种方式优点的讨论. 在这里我只简述一下,这里通过使用一个应用上下文
+ * 或者注册表来避免单元素的激增,这样可以促进设计的灵活性.使我们能够把"单元素集"实现为普通Java
+ * 组件;它们将通过它们的Bean属性被配置.配置管理代码将由应用上下文--一个通用框架对象来处理
+ * 而不是个别应用对象来处理.应用开发人员将永不需要编写代码来读取属性文件.最大限度减少对具体API
+ * (比如专有API)的依赖性.通过将应用组件变成JavaBean 使他们可以被通用的应用框架来配置,从而消除
+ * 了让应用代码来实现配置管理的需要.并且和基于接口设计结合起来,使用JavaBean就成为了一种无需
+ * 修改Java 代码就可以装配和参数化应用的强有力手段.配置管理集中化使得无需修改应用代码来读取
+ * 配置成为可能.通过配置JavaBean属性保证了整个应用内及体系结构层间的一致性.
+ *
+ * 注意:通常来说使用依赖注入("推"配置)通过 setter 或者 构造器来配置应用对象,而不是使用任何
+ * 形式的"拉"配置方式比如 BeanFactory 查找. Spring的依赖注入功能是通过使用这个 BeanFactory
+ * 接口和它的子接口来实现的.
+ *
+ * 通常情况下一个 BeanFactory 会读取存储在配置源(比如XML文档)中的bean定义,并且使用
+ * {@code org.springframework.beans} 包来配置bean.然而,实现类可以直接在 Java 代码中直接
+ * 返回它创建的所需 Java 对象.
+ *
+ * 和 {@link ListableBeanFactory} 中的方法对比,如果这是一个 {@lbaink HierarchicalBeanFactory}
+ * 所有操作还会检查它的父工厂.如果一个bean在这个工厂实例中没有找到,它会询问它的直接父工厂.这个工厂
+ * 实例中的bean会重载父工厂中的同名bean.
+ *
+ * Bean工厂实现应该尽可能支持标准 bean 的生命周期接口.全套的初始化方法以及他们的标准顺序是:
+ * <ol>
+ * <li>BeanNameAware's {@code setBeanName}
+ * <li>BeanClassLoaderAware's {@code setBeanClassLoader}
+ * <li>BeanFactoryAware's {@code setBeanFactory}
+ * <li>EnvironmentAware's {@code setEnvironment}
+ * <li>EmbeddedValueResolverAware's {@code setEmbeddedValueResolver}
+ * <li>ResourceLoaderAware's {@code setResourceLoader}
+ * (只有运行在一个应用上下文时可用)
+ * <li>ApplicationEventPublisherAware's {@code setApplicationEventPublisher}
+ * (只有运行在一个应用上下文时可用)
+ * <li>MessageSourceAware's {@code setMessageSource}
+ * (只有运行在一个应用上下文时可用)
+ * <li>ApplicationContextAware's {@code setApplicationContext}
+ * (只有运行在一个应用上下文时可用)
+ * <li>ServletContextAware's {@code setServletContext}
+ * (只有运行在一个应用上下文时可用)
+ * <li>{@code postProcessBeforeInitialization} methods of BeanPostProcessors
+ * <li>InitializingBean's {@code afterPropertiesSet}
+ * <li>一个自定义的 init-method 方法
+ * <li>{@code postProcessAfterInitialization} methods of BeanPostProcessors
+ * </ol>
+ *
+ * 当关闭一个bean工厂时,会调用下列的生命周期方法:
+ * <ol>
+ * <li>{@code postProcessBeforeDestruction} methods of DestructionAwareBeanPostProcessors
+ * <li>DisposableBean's {@code destroy}
+ * <li>自定义的 destroy-method 方法
+ * </ol>
+ *
+ */
+
+/**
  * The root interface for accessing a Spring bean container.
  *
  * <p>This is the basic client view of a bean container;
@@ -116,6 +184,14 @@ import org.springframework.lang.Nullable;
  */
 public interface BeanFactory {
 
+
+	/**
+	 * 用来取消对 {@link FactoryBean} 返回实例的引用并且和 FactoryBean 创建的 bean 区分开.
+	 * 比如,如果有一个叫做 {@code myJndiObject} 的FactoryBean, 获取 {@code &myJndiObject}
+	 * 将会返回一个工厂,而不是这个工厂返回的实例对象.
+	 * FactoryBean 是Spring 中用来处理复杂 bean 的类,通过将复杂操作封装起来,使得上层使用的时候
+	 * 更加方便和透明.
+	 */
 	/**
 	 * Used to dereference a {@link FactoryBean} instance and distinguish it from
 	 * beans <i>created</i> by the FactoryBean. For example, if the bean named
@@ -125,6 +201,14 @@ public interface BeanFactory {
 	String FACTORY_BEAN_PREFIX = "&";
 
 
+
+	/**
+	 * 返回一个指定bean 实例,可以是共享或者独立的.
+	 * <p>这个方法使得一个 Spring BeanFactory 可以作为 单例 或者 原型 设计模式的替代方案.调用者
+	 * 在单例 bean 的时候可能会保留返回对象的引用.
+	 * <p>会将别名转化为对应的规范 bean 名字.
+	 * <P>在这个工厂实例中无法找到该bean 的时候询问它的父工厂.
+	 */
 	/**
 	 * Return an instance, which may be shared or independent, of the specified bean.
 	 * <p>This method allows a Spring BeanFactory to be used as a replacement for the
@@ -139,13 +223,22 @@ public interface BeanFactory {
 	 */
 	Object getBean(String name) throws BeansException;
 
+
+	/**
+	 * 返回一个指定bean 实例,可以是共享或者独立的.
+	 * <p>行为和 {@link #getBean(String)} 相同, 但是提供了一个类型安全测试,如果bean 不是所需类型的
+	 * 话抛出一个 BeanNotOfRequiredTypeException. 这意味着转化异常抛出 ClassCastException 的情况
+	 * 是不可能出现的,而在 {@link #getBean(String)} 中是有可能出现的.
+	 * <p>会将别名转化为对应的规范 bean 名字.
+	 * <p>在这个工厂实例中无法找到该bean 的时候询问它的父工厂.
+	 */
 	/**
 	 * Return an instance, which may be shared or independent, of the specified bean.
 	 * <p>Behaves the same as {@link #getBean(String)}, but provides a measure of type
 	 * safety by throwing a BeanNotOfRequiredTypeException if the bean is not of the
 	 * required type. This means that ClassCastException can't be thrown on casting
 	 * the result correctly, as can happen with {@link #getBean(String)}.
-	 * <p>Translates aliases back to the corresponding canonical bean name.
+	 * <p>Translates aliases back to the corSpringBootApplicationresponding canonical bean name.
 	 * <p>Will ask the parent factory if the bean cannot be found in this factory instance.
 	 * @param name the name of the bean to retrieve
 	 * @param requiredType type the bean must match; can be an interface or superclass
@@ -156,6 +249,10 @@ public interface BeanFactory {
 	 */
 	<T> T getBean(String name, Class<T> requiredType) throws BeansException;
 
+	/**
+	 * 返回一个指定bean 实例,可以是共享或者独立的.
+	 * <p>允许显式指定构造器参数/工厂方法参数, (如果有的话)重写指定默认参数在 bean 定义的时候.
+	 */
 	/**
 	 * Return an instance, which may be shared or independent, of the specified bean.
 	 * <p>Allows for specifying explicit constructor arguments / factory method arguments,
@@ -172,6 +269,20 @@ public interface BeanFactory {
 	 */
 	Object getBean(String name, Object... args) throws BeansException;
 
+	/**
+	 * Return the bean instance that uniquely matches the given object type, if any.
+	 * <p>This method goes into {@link ListableBeanFactory} by-type lookup territory
+	 * but may also be translated into a conventional by-name lookup based on the name
+	 * of the given type. For more extensive retrieval operations across sets of beans,
+	 * use {@link ListableBeanFactory} and/or {@link BeanFactoryUtils}.
+	 * @param requiredType type the bean must match; can be an interface or superclass
+	 * @return an instance of the single bean matching the required type
+	 * @throws NoSuchBeanDefinitionException if no bean of the given type was found
+	 * @throws NoUniqueBeanDefinitionException if more than one bean of the given type was found
+	 * @throws BeansException if the bean could not be created
+	 * @since 3.0
+	 * @see ListableBeanFactory
+	 */
 	/**
 	 * Return the bean instance that uniquely matches the given object type, if any.
 	 * <p>This method goes into {@link ListableBeanFactory} by-type lookup territory
